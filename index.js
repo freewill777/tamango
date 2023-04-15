@@ -101,7 +101,7 @@ const upload = multer({
             cb(null, 'uploads/images');
         },
         filename: (req, file, cb) => {
-            const ext = MIME_TYPE_MAP[file.mimetype];
+            // const ext = MIME_TYPE_MAP[file.mimetype];
             const name = file.originalname;
             if (!!ext) {
                 cb(null, name);
@@ -116,7 +116,9 @@ const upload = multer({
 const MIME_TYPE_MAP = {
     'image/png': 'png',
     'image/jpeg': 'jpeg',
-    'image/jpg': 'jpg'
+    'image/jpg': 'jpg',
+    'video/mp4': 'mp4',
+    'video/quicktime': 'quicktime'
 };
 
 app.post("/upload_files", upload.array("files"), function (req, res) {
