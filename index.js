@@ -4,6 +4,7 @@ var cors = require('cors')
 const asyncHandler = require('express-async-handler')
 const app = express();
 const ObjectId = require('mongoose').Types.ObjectId;
+var fs = require('fs');
 
 let router = express.Router();
 
@@ -93,16 +94,29 @@ app.get('/blog', asyncHandler(async (req, res) => {
     }
 }));
 
+function mediaTypeMap(mimetype) {
+    if (mimetype.includes('image')) {
+        return 'images'
+    }
+}
 
 const multer = require("multer");
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => {
-            cb(null, 'uploads/images');
+            const userId = req.headers.userid
+            const mimetype = file.mimetype
+            const dir = `uploads/${userId}/${mediaTypeMap(mimetype)}`;
+
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            cb(null, dir);
         },
         filename: (req, file, cb) => {
             const ext = MIME_TYPE_MAP[file.mimetype];
-            const name = file.originalname;
+            // const name = file.originalname;
+            const name = String(Date.now()) + '.' + ext;
             if (!!ext) {
                 cb(null, name);
             } else {
@@ -120,8 +134,7 @@ const MIME_TYPE_MAP = {
 };
 
 app.post("/upload_files", upload.array("files"), function (req, res) {
-    console.log(req.body);
-    console.log(req.files);
+    userId = req.body.userId
     res.json({ message: "Successfully uploaded files" });
 });
 
