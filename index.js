@@ -98,9 +98,13 @@ function mediaTypeMap(mimetype) {
     if (mimetype.includes('image')) {
         return 'images'
     }
+    if (mimetype.includes('video')) {
+        return 'videos'
+    }
 }
 
 const multer = require("multer");
+
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => {
@@ -130,7 +134,8 @@ const upload = multer({
 const MIME_TYPE_MAP = {
     'image/png': 'png',
     'image/jpeg': 'jpeg',
-    'image/jpg': 'jpg'
+    'image/jpg': 'jpg',
+    'video/quicktime': 'mov'
 };
 
 app.post("/upload_files", upload.array("files"), function (req, res) {
