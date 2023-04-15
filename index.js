@@ -93,6 +93,33 @@ app.get('/blog', asyncHandler(async (req, res) => {
     }
 }));
 
-app.listen(3000, () => {
-    console.log('Server listening on port 3000 !');
+
+const multer = require("multer");
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, 'uploads/images');
+        },
+        filename: (req, file, cb) => {
+            const ext = MIME_TYPE_MAP[file.mimetype];
+            cb(null, Math.random().toString().slice(2, 8) + '.' + ext);
+        },
+    }),
+});
+
+const MIME_TYPE_MAP = {
+    'image/png': 'png',
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpg'
+};
+
+app.post("/upload_files", upload.array("files"), function (req, res) {
+    console.log(req.body);
+    console.log(req.files);
+    res.json({ message: "Successfully uploaded files" });
+});
+
+const port = 3035
+app.listen(port, () => {
+    console.log(`Server listening on port ${port} !!`);
 });
