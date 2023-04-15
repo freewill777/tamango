@@ -4,6 +4,7 @@ var cors = require('cors')
 const asyncHandler = require('express-async-handler')
 const app = express();
 const ObjectId = require('mongoose').Types.ObjectId;
+const { MONGO_URL } = require("./settings");
 var fs = require('fs');
 
 let router = express.Router();
@@ -12,13 +13,13 @@ app.use(cors())
 
 let User = require('./Models/User');
 
-mongoose.connect('mongodb://127.0.0.1:27017/codex')
+mongoose.connect(MONGO_URL)
 
 app.get('/login', asyncHandler(async (req, res) => {
     try {
-        var { name, password } = req.query
+        var { email, password } = req.query
         const collection = mongoose.connection.db.collection('users')
-        const cursor = collection.find({ name })
+        const cursor = collection.find({ email: email.toLowerCase() })
         const usersFound = await cursor.toArray()
         if (usersFound.length === 0) {
             res.status(500).send('User does not exist');
@@ -39,17 +40,18 @@ app.get('/login', asyncHandler(async (req, res) => {
 
 app.post('/register', asyncHandler(async (req, res) => {
     try {
-        var { name, password } = req.query
+        var { name, password, email } = req.query
         const collection = mongoose.connection.db.collection('users')
-        const cursor = collection.find({ name })
+        const cursor = collection.find({ name: name.toLowerCase() })
         const usersFound = await cursor.toArray()
         if (usersFound.length > 0) {
             res.status(500).send('User already exists');
             return
         }
         const { insertedId: id } = await collection.insertOne({
-            name,
+            name: name.toLowerCase(),
             password,
+            email: email.toLowerCase(),
             stats: {
                 posts: 0,
                 videos: 0,
@@ -81,7 +83,7 @@ app.get('/user', asyncHandler(async (req, res) => {
     }
 }));
 
-app.get('/blog', asyncHandler(async (req, res) => {
+app.get('/posts', asyncHandler(async (req, res) => {
     try {
         const { id } = req.query
         const collection = mongoose.connection.db.collection('posts')
@@ -102,6 +104,7 @@ function mediaTypeMap(mimetype) {
 
 const multer = require("multer");
 const {SERVER_PORT} = require("./settings");
+const {settings} = require("express/lib/application");
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => {
@@ -115,8 +118,7 @@ const upload = multer({
             cb(null, dir);
         },
         filename: (req, file, cb) => {
-            // const ext = MIME_TYPE_MAP[file.mimetype];
-            // const name = file.originalname;
+            const ext = MIME_TYPE_MAP[file.mimetype];
             const name = String(Date.now()) + '.' + ext;
             if (!!ext) {
                 cb(null, name);
