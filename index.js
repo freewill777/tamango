@@ -95,6 +95,7 @@ app.get('/blog', asyncHandler(async (req, res) => {
 
 
 const multer = require("multer");
+const {SERVER_PORT} = require("./settings");
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => {
@@ -127,7 +128,6 @@ app.post("/upload_files", upload.array("files"), function (req, res) {
     res.json({ message: "Successfully uploaded files" });
 });
 
-const port = 3035
-app.listen(port, () => {
-    console.log(`Server listening on port ${port} !!`);
+app.listen(SERVER_PORT, () => {
+    console.log(`Server listening on port ${SERVER_PORT} !!`);
 });
