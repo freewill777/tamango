@@ -101,7 +101,7 @@ const upload = multer({
             cb(null, 'uploads/images');
         },
         filename: (req, file, cb) => {
-            // const ext = MIME_TYPE_MAP[file.mimetype];
+            const ext = MIME_TYPE_MAP[file.mimetype];
             const name = file.originalname;
             if (!!ext) {
                 cb(null, name);
