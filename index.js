@@ -119,10 +119,10 @@ app.post('/like', asyncHandler(async (req, res) => {
         }
         if (isLiked) {
             collection.updateOne(filter, unlikeMediafile)
-            res.json({userId,mediafileId,message:"Unliked!"});
+            res.json({userId, mediafileId, message: "Unliked!"});
         } else {
             collection.updateOne(filter, likeMediafile)
-            res.json({userId,mediafileId,message:"Liked!"});
+            res.json({userId, mediafileId, message: "Liked!"});
         }
     } catch (err) {
         console.error(`Error retrieving data: ${err.message}`);
@@ -130,51 +130,80 @@ app.post('/like', asyncHandler(async (req, res) => {
     }
 }));
 
-app.post('/unlike', asyncHandler(async (req, res) => {
+app.post('/comments', asyncHandler(async (req, res) => {
     try {
-        const {userId, mediafileId} = req.query
+        const {userId, mediafileId, comment} = req.query
+        // Insert comment in comments collection
+        const comments = mongoose.connection.db.collection('comments')
+        const {insertedId: commentId} = await comments.insertOne({
+            userId,
+            mediafileId,
+            text: comment,
+            timestamp: Date.now()
+        })
+        // Add commentid to mediafile
         const collection = mongoose.connection.db.collection('mediafiles')
         const filter = {_id: new ObjectId(mediafileId)}
-        const updateMediafile = {
-            $set: {
-                likes: likes.filter(like => like !== userId)
+        const commentMediafile = {
+            $push: {
+                comments: commentId
             }
         }
-        const cursor = collection.updateOne(filter, updateMediafile)
-        const mediafile = await cursor.toArray()
-        res.json({mediafile});
+        collection.updateOne(filter, commentMediafile)
+        res.json({userId, mediafileId, message: "Commented!"});
     } catch (err) {
         console.error(`Error retrieving data: ${err.message}`);
         res.status(500).send('Internal server error');
     }
 }));
+
+// GET list of comments by mediafileId
+app.get('/comments', asyncHandler(async (req, res) => {
+    try {
+        const { mediafileId } = req.query
+        const collection = mongoose.connection.db.collection('comments')
+        const cursor = collection.find({mediafileId})
+        const comments = await cursor.toArray()
+        res.json(comments);
+    } catch (err) {
+        console.error(`Error retrieving data: ${err.message}`);
+        res.status(500).send('Internal server error');
+    }
+}));
+
 
 const multer = require("multer");
 const {SERVER_PORT} = require("./settings");
 const {settings} = require("express/lib/application");
 let insertedid = ''
-let dir = ''
-let ext = ''
 const upload = multer({
     storage: multer.diskStorage({
         destination: async (req, file, cb) => {
             const userId = req.headers.userid
             const mediaType = req.headers.mediatype
-            dir = `uploads/${userId}/${mediaType}`;
-
+            let dir = `uploads/${userId}/${mediaType}/`;
+            console.log(dir)
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, {recursive: true});
             }
             cb(null, dir);
-
+            const ext = MIME_TYPE_MAP[file.mimetype];
+            console.log(ext)
             const collection = mongoose.connection.db.collection('mediafiles')
-            const { insertedId } = await collection.insertOne({
+            const {insertedId} = await collection.insertOne({
                 userId,
                 mediaType,
+                timestamp: Date.now(),
                 likes: [],
                 comments: [],
-                path: dir + insertedId + '.' + ext
             })
+            const filter = {insertedId}
+            const path = dir + insertedId + '.' + ext
+            console.log(path)
+            const updateMediafile = {
+                $set: {path}
+            }
+            collection.updateOne({_id: new ObjectId(insertedId)},updateMediafile)
             insertedid = insertedId
 
         },
