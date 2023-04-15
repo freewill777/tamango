@@ -4,7 +4,7 @@ var cors = require('cors')
 const asyncHandler = require('express-async-handler')
 const app = express();
 const ObjectId = require('mongoose').Types.ObjectId;
-const {MONGO_URL} = require("./settings");
+const { MONGO_URL } = require("./settings");
 var fs = require('fs');
 
 let router = express.Router();
@@ -17,18 +17,18 @@ mongoose.connect(MONGO_URL)
 
 app.get('/login', asyncHandler(async (req, res) => {
     try {
-        var {email, password} = req.query
+        var { email, password } = req.query
         const collection = mongoose.connection.db.collection('users')
-        const cursor = collection.find({email: email.toLowerCase()})
+        const cursor = collection.find({ email: email.toLowerCase() })
         const usersFound = await cursor.toArray()
         if (usersFound.length === 0) {
             res.status(500).send('User does not exist');
             return
         }
         const user = usersFound[0]
-        const {_id} = user
+        const { _id } = user
         if (password === user.password) {
-            res.json({id: _id});
+            res.json({ id: _id });
         } else {
             res.status(401).json({});
         }
@@ -38,17 +38,17 @@ app.get('/login', asyncHandler(async (req, res) => {
     }
 }));
 
-app.post('/register', asyncHandler(async (req, res) => {
+app.get('/register', asyncHandler(async (req, res) => {
     try {
-        var {name, password, email} = req.query
+        var { name, password, email } = req.query
         const collection = mongoose.connection.db.collection('users')
-        const cursor = collection.find({name: name.toLowerCase()})
+        const cursor = collection.find({ name: name.toLowerCase() })
         const usersFound = await cursor.toArray()
         if (usersFound.length > 0) {
             res.status(500).send('User already exists');
             return
         }
-        const {insertedId: id} = await collection.insertOne({
+        const { insertedId: id } = await collection.insertOne({
             name: name.toLowerCase(),
             password,
             email: email.toLowerCase(),
@@ -63,7 +63,7 @@ app.post('/register', asyncHandler(async (req, res) => {
                 avatar: ''
             }
         })
-        res.json({id});
+        res.json({ id });
     } catch (err) {
         console.error(`Error retrieving data: ${err.message}`);
         res.status(500).send('Internal server error');
@@ -72,9 +72,9 @@ app.post('/register', asyncHandler(async (req, res) => {
 
 app.get('/user', asyncHandler(async (req, res) => {
     try {
-        const {id} = req.query
+        const { id } = req.query
         const collection = mongoose.connection.db.collection('users')
-        const cursor = collection.find({_id: new ObjectId(id)})
+        const cursor = collection.find({ _id: new ObjectId(id) })
         const usersFound = await cursor.toArray()
         res.json(usersFound[0]);
     } catch (err) {
@@ -85,11 +85,11 @@ app.get('/user', asyncHandler(async (req, res) => {
 
 app.get('/mediafiles', asyncHandler(async (req, res) => {
     try {
-        const {userId} = req.query
+        const { userId } = req.query
         const collection = mongoose.connection.db.collection('mediafiles')
-        const cursor = collection.find({userId})
+        const cursor = collection.find({ userId })
         const posts = await cursor.toArray()
-        res.json({userId, posts});
+        res.json({ userId, posts });
     } catch (err) {
         console.error(`Error retrieving data: ${err.message}`);
         res.status(500).send('Internal server error');
@@ -98,12 +98,12 @@ app.get('/mediafiles', asyncHandler(async (req, res) => {
 
 app.post('/like', asyncHandler(async (req, res) => {
     try {
-        const {userId, mediafileId} = req.query
+        const { userId, mediafileId } = req.query
         const collection = mongoose.connection.db.collection('mediafiles')
-        const filter = {_id: new ObjectId(mediafileId)}
+        const filter = { _id: new ObjectId(mediafileId) }
         const cursor = collection.find(filter)
         const mediafile = await cursor.toArray()
-        const {likes} = mediafile[0]
+        const { likes } = mediafile[0]
         const isLiked = likes.includes(userId)
 
         console.log(likes)
@@ -119,10 +119,10 @@ app.post('/like', asyncHandler(async (req, res) => {
         }
         if (isLiked) {
             collection.updateOne(filter, unlikeMediafile)
-            res.json({userId, mediafileId, message: "Unliked!"});
+            res.json({ userId, mediafileId, message: "Unliked!" });
         } else {
             collection.updateOne(filter, likeMediafile)
-            res.json({userId, mediafileId, message: "Liked!"});
+            res.json({ userId, mediafileId, message: "Liked!" });
         }
     } catch (err) {
         console.error(`Error retrieving data: ${err.message}`);
@@ -132,10 +132,10 @@ app.post('/like', asyncHandler(async (req, res) => {
 
 app.post('/comments', asyncHandler(async (req, res) => {
     try {
-        const {userId, mediafileId, comment} = req.query
+        const { userId, mediafileId, comment } = req.query
         // Insert comment in comments collection
         const comments = mongoose.connection.db.collection('comments')
-        const {insertedId: commentId} = await comments.insertOne({
+        const { insertedId: commentId } = await comments.insertOne({
             userId,
             mediafileId,
             text: comment,
@@ -143,14 +143,14 @@ app.post('/comments', asyncHandler(async (req, res) => {
         })
         // Add commentid to mediafile
         const collection = mongoose.connection.db.collection('mediafiles')
-        const filter = {_id: new ObjectId(mediafileId)}
+        const filter = { _id: new ObjectId(mediafileId) }
         const commentMediafile = {
             $push: {
                 comments: commentId
             }
         }
         collection.updateOne(filter, commentMediafile)
-        res.json({userId, mediafileId, message: "Commented!"});
+        res.json({ userId, mediafileId, message: "Commented!" });
     } catch (err) {
         console.error(`Error retrieving data: ${err.message}`);
         res.status(500).send('Internal server error');
@@ -162,7 +162,7 @@ app.get('/comments', asyncHandler(async (req, res) => {
     try {
         const { mediafileId } = req.query
         const collection = mongoose.connection.db.collection('comments')
-        const cursor = collection.find({mediafileId})
+        const cursor = collection.find({ mediafileId })
         const comments = await cursor.toArray()
         res.json(comments);
     } catch (err) {
@@ -173,8 +173,8 @@ app.get('/comments', asyncHandler(async (req, res) => {
 
 
 const multer = require("multer");
-const {SERVER_PORT} = require("./settings");
-const {settings} = require("express/lib/application");
+const { SERVER_PORT } = require("./settings");
+const { settings } = require("express/lib/application");
 let insertedid = ''
 const upload = multer({
     storage: multer.diskStorage({
@@ -184,26 +184,26 @@ const upload = multer({
             let dir = `uploads/${userId}/${mediaType}/`;
             console.log(dir)
             if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, {recursive: true});
+                fs.mkdirSync(dir, { recursive: true });
             }
             cb(null, dir);
             const ext = MIME_TYPE_MAP[file.mimetype];
             console.log(ext)
             const collection = mongoose.connection.db.collection('mediafiles')
-            const {insertedId} = await collection.insertOne({
+            const { insertedId } = await collection.insertOne({
                 userId,
                 mediaType,
                 timestamp: Date.now(),
                 likes: [],
                 comments: [],
             })
-            const filter = {insertedId}
+            const filter = { insertedId }
             const path = dir + insertedId + '.' + ext
             console.log(path)
             const updateMediafile = {
-                $set: {path}
+                $set: { path }
             }
-            collection.updateOne({_id: new ObjectId(insertedId)},updateMediafile)
+            collection.updateOne({ _id: new ObjectId(insertedId) }, updateMediafile)
             insertedid = insertedId
 
         },
@@ -225,11 +225,11 @@ const MIME_TYPE_MAP = {
     'image/jpeg': 'jpeg',
     'image/jpg': 'jpg',
     'video/mp4': 'mp4',
-    'video/quicktime': 'quicktime'
+    'video/quicktime': 'mov'
 };
 
 app.post("/upload_files", upload.array("files"), async function (req, res) {
-    res.json({message: "Successfully uploaded files"});
+    res.json({ message: "Successfully uploaded files" });
 });
 
 app.listen(SERVER_PORT, () => {
