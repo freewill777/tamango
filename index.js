@@ -42,7 +42,8 @@ app.post('/register', asyncHandler(async (req, res) => {
     try {
         var { name, password, email } = req.query
         const collection = mongoose.connection.db.collection('users')
-        const cursor = collection.find({ name: name.toLowerCase() })
+        const cursor = collection.find({ email: email.toLowerCase() })
+
         const usersFound = await cursor.toArray()
         if (usersFound.length > 0) {
             res.status(500).send('User already exists');
