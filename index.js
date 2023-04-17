@@ -106,8 +106,6 @@ app.post('/like', asyncHandler(async (req, res) => {
         const mediafile = await cursor.toArray()
         const { likes } = mediafile[0]
         const isLiked = likes.includes(userId)
-
-        console.log(likes)
         const likeMediafile = {
             $push: {
                 likes: userId
@@ -184,6 +182,90 @@ app.get('/photos', (req, res) => {
     }
 });
 
+app.get('/photo', (req, res) => {
+    const { userId, index } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'image');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    const photoPaths = photoFileNames.map(fileName => path.join(photoDirPath, fileName));
+    if (photoPaths.length > 0) {
+        res.sendFile(photoPaths[index]);
+    } else {
+        res.status(404).send('No photos found');
+    }
+});
+
+app.get('/video', (req, res) => {
+    const { userId, index } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'video');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    const photoPaths = photoFileNames.map(fileName => path.join(photoDirPath, fileName));
+    if (photoPaths.length > 0) {
+        res.sendFile(photoPaths[index]);
+    } else {
+        res.status(404).send('No photos found');
+    }
+});
+
+app.get('/photos-length', (req, res) => {
+    const { userId } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'image');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    res.json(photoFileNames.length)
+});
+
+app.get('/videos-length', (req, res) => {
+    const { userId } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'video');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    res.json(photoFileNames.length)
+});
+
+app.get('/following', async (req, res) => {
+    const { userId } = req.query
+    const collection = mongoose.connection.db.collection('users')
+    const cursor = collection.find({ _id: new ObjectId(userId) })
+    const users = await cursor.toArray()
+    const { following: followingIds } = users[0].stats
+    const following =
+        followingIds.map(async id => {
+            const cursorFollowing = collection.find({ _id: new ObjectId(id) })
+            const usersFollowing = await cursorFollowing.toArray()
+            const { name } = usersFollowing[0]
+            console.log(id, name)
+            return { id, name }
+        })
+    res.json(await Promise.all(following))
+});
+
+app.get('/followers', async (req, res) => {
+    const { userId } = req.query
+    const collection = mongoose.connection.db.collection('users')
+    const cursor = collection.find({ _id: new ObjectId(userId) })
+    const users = await cursor.toArray()
+    const { followers: followerIds } = users[0].stats
+    const followers =
+        followerIds.map(async id => {
+            const cursorFollowing = collection.find({ _id: new ObjectId(id) })
+            const usersFollowing = await cursorFollowing.toArray()
+            const { name } = usersFollowing[0]
+            console.log(id, name)
+            return { id, name }
+        })
+    res.json(await Promise.all(followers))
+});
+
+app.get('/avatar', (req, res) => {
+    const { userId } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'avatar');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    const photoPaths = photoFileNames.map(fileName => path.join(photoDirPath, fileName));
+    if (photoPaths.length > 0) {
+        res.sendFile(photoPaths[0]);
+    } else {
+        res.status(404).send('No photos found');
+    }
+});
+
 const multer = require("multer");
 const { SERVER_PORT } = require("./settings");
 let insertedid = ''
@@ -192,8 +274,11 @@ const upload = multer({
         destination: async (req, file, cb) => {
             const userId = req.headers.userid
             const mediaType = req.headers.mediatype
+            const { avatar } = req.query
             let dir = `uploads/${userId}/${mediaType}/`;
-            console.log(dir)
+            if (!!avatar) {
+                dir = `uploads/${userId}/avatar/`;
+            }
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
             }
@@ -216,7 +301,7 @@ const upload = multer({
             }
             collection.updateOne({ _id: new ObjectId(insertedId) }, updateMediafile)
             insertedid = insertedId
-
+            cb(null, dir);
         },
         filename: (req, file, cb) => {
             ext = MIME_TYPE_MAP[file.mimetype];
