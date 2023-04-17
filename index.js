@@ -81,6 +81,7 @@ app.get('/user', asyncHandler(async (req, res) => {
     }
 }));
 
+//GET Mediafiles by {userId}
 app.get('/mediafiles', asyncHandler(async (req, res) => {
     try {
         const {userId} = req.query
@@ -94,6 +95,7 @@ app.get('/mediafiles', asyncHandler(async (req, res) => {
     }
 }));
 
+//{userId} likes {mediafileId}
 app.post('/like', asyncHandler(async (req, res) => {
     try {
         const {userId, mediafileId} = req.query
@@ -128,6 +130,7 @@ app.post('/like', asyncHandler(async (req, res) => {
     }
 }));
 
+//{senderUserId} follows  {recvUserId}
 app.post('/follow', asyncHandler(async (req, res) => {
     try {
         const {senderUserId, recvUserId} = req.query
@@ -158,6 +161,8 @@ app.post('/follow', asyncHandler(async (req, res) => {
         res.status(500).send('Internal server error');
     }
 }));
+
+//Get list of users {userId} is following
 app.get('/following', async (req, res) => {
     const {userId} = req.query
     const collection = mongoose.connection.db.collection('users')
@@ -174,6 +179,8 @@ app.get('/following', async (req, res) => {
     })
     res.json(await Promise.all(following))
 });
+
+//Get list of users following {userId}
 app.get('/followers', async (req, res) => {
     const {userId} = req.query
     const collection = mongoose.connection.db.collection('users')
@@ -282,6 +289,7 @@ app.get('/comments', asyncHandler(async (req, res) => {
     }
 }));
 
+//GET photo by {userId, index}
 app.get('/photo', (req, res) => {
     const {userId, index} = req.query
     const photoDirPath = path.join(__dirname, 'uploads', userId, 'image');
