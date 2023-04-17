@@ -340,6 +340,15 @@ app.get('/videos-length', (req, res) => {
     res.json(photoFileNames.length)
 });
 
+//GET newsfeed by {userId}
+app.get('/newsfeed', async (req, res) => {
+    const {userId} = req.query
+    const collection = mongoose.connection.db.collection('newsfeed')
+    const cursor = collection.find({userId})
+    return await cursor.toArray()
+});
+
+
 const multer = require("multer");
 const {SERVER_PORT} = require("./settings");
 let insertedid = ''
