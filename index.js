@@ -6,6 +6,7 @@ const app = express();
 const ObjectId = require('mongoose').Types.ObjectId;
 const { MONGO_URL } = require("./settings");
 var fs = require('fs');
+const path = require('path');
 
 let router = express.Router();
 
@@ -171,10 +172,20 @@ app.get('/comments', asyncHandler(async (req, res) => {
     }
 }));
 
+app.get('/photos', (req, res) => {
+    const { userId } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'image');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    const photoPaths = photoFileNames.map(fileName => path.join(photoDirPath, fileName));
+    if (photoPaths.length > 0) {
+        res.sendFile(photoPaths[0]);
+    } else {
+        res.status(404).send('No photos found');
+    }
+});
 
 const multer = require("multer");
 const { SERVER_PORT } = require("./settings");
-const { settings } = require("express/lib/application");
 let insertedid = ''
 const upload = multer({
     storage: multer.diskStorage({
