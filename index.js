@@ -50,10 +50,7 @@ app.post('/register', asyncHandler(async (req, res) => {
             return
         }
         const {insertedId: id} = await collection.insertOne({
-            name: name.toLowerCase(),
-            password,
-            email: email.toLowerCase(),
-            stats: {
+            name: name.toLowerCase(), password, email: email.toLowerCase(), stats: {
                 posts: [],
                 videos: [],
                 followers: [],
@@ -133,7 +130,7 @@ app.post('/like', asyncHandler(async (req, res) => {
 
 app.post('/follow', asyncHandler(async (req, res) => {
     try {
-        const { senderUserId, recvUserId } = req.query
+        const {senderUserId, recvUserId} = req.query
         const collection = mongoose.connection.db.collection('users')
 
         const recvFilter = {_id: new ObjectId(recvUserId)}
@@ -142,19 +139,19 @@ app.post('/follow', asyncHandler(async (req, res) => {
 
         const senderFilter = {_id: new ObjectId(senderUserId)}
 
-        const { stats } = recvUser[0]
-        const { followers } = stats
+        const {stats} = recvUser[0]
+        const {followers} = stats
         const isFollowed = followers.includes(senderUserId)
 
         if (isFollowed) {
-            collection.updateOne(recvFilter,{ $pull: { "stats.followers": senderUserId} })
-            collection.updateOne(senderFilter, { $pull: { "stats.following": recvUserId} })
-            res.json({ message: `${senderUserId} unfollowed ${recvUserId}!`});
+            collection.updateOne(recvFilter, {$pull: {"stats.followers": senderUserId}})
+            collection.updateOne(senderFilter, {$pull: {"stats.following": recvUserId}})
+            res.json({message: `${senderUserId} unfollowed ${recvUserId}!`});
         }
         if (!isFollowed) {
-            collection.updateOne(recvFilter,{ $push: { "stats.followers": senderUserId} })
-            collection.updateOne(senderFilter, { $push: { "stats.following": recvUserId} })
-            res.json({ message: `${senderUserId} followed ${recvUserId}!`});
+            collection.updateOne(recvFilter, {$push: {"stats.followers": senderUserId}})
+            collection.updateOne(senderFilter, {$push: {"stats.following": recvUserId}})
+            res.json({message: `${senderUserId} followed ${recvUserId}!`});
         }
     } catch (err) {
         console.error(`Error retrieving data: ${err.message}`);
@@ -162,50 +159,98 @@ app.post('/follow', asyncHandler(async (req, res) => {
     }
 }));
 app.get('/following', async (req, res) => {
-    const { userId } = req.query
+    const {userId} = req.query
     const collection = mongoose.connection.db.collection('users')
     const cursor = collection.find({_id: new ObjectId(userId)})
     const users = await cursor.toArray()
-    const { following: followingIds } = users[0].stats
+    const {following: followingIds} = users[0].stats
     console.log(followingIds)
-    const following =
-            followingIds.map(async id => {
-                const cursorFollowing = collection.find({_id: new ObjectId(id)})
-                const usersFollowing = await cursorFollowing.toArray()
-                const { name } = usersFollowing[0]
-                console.log(id, name)
-                return {id, name}
-            })
+    const following = followingIds.map(async id => {
+        const cursorFollowing = collection.find({_id: new ObjectId(id)})
+        const usersFollowing = await cursorFollowing.toArray()
+        const {name} = usersFollowing[0]
+        console.log(id, name)
+        return {id, name}
+    })
     res.json(await Promise.all(following))
 });
 app.get('/followers', async (req, res) => {
-    const { userId } = req.query
+    const {userId} = req.query
     const collection = mongoose.connection.db.collection('users')
     const cursor = collection.find({_id: new ObjectId(userId)})
     const users = await cursor.toArray()
-    const { followers: followerIds } = users[0].stats
+    const {followers: followerIds} = users[0].stats
     console.log(followerIds)
-    const followers =
-        followerIds.map(async id => {
-            const cursorFollowing = collection.find({_id: new ObjectId(id)})
-            const usersFollowing = await cursorFollowing.toArray()
-            const { name } = usersFollowing[0]
-            console.log(id, name)
-            return {id, name}
-        })
+    const followers = followerIds.map(async id => {
+        const cursorFollowing = collection.find({_id: new ObjectId(id)})
+        const usersFollowing = await cursorFollowing.toArray()
+        const {name} = usersFollowing[0]
+        console.log(id, name)
+        return {id, name}
+    })
     res.json(await Promise.all(followers))
 });
 
+//Create Group by {name}
+app.post('/group', asyncHandler(async (req, res) => {
+    try {
+        const {name} = req.query
+        const collection = mongoose.connection.db.collection('groups')
+        const {insertedId: id} = await collection.insertOne({
+            groupName: name, members: [], files: []
+        })
+        res.json({id});
+    } catch (err) {
+        console.error(`Error retrieving data: ${err.message}`);
+        res.status(500).send('Internal server error');
+    }
+}));
+
+//Join/Leave group by {groupId, userId, action}
+app.put('/group', asyncHandler(async (req, res) => {
+    try {
+        const {groupId, userId, action} = req.query
+        const collection = mongoose.connection.db.collection('groups')
+        const filter = {_id: new ObjectId(groupId)}
+        const cursor = collection.find(filter)
+        const groupFound = await cursor.toArray()
+        const {members} = groupFound[0]
+
+        if (!members.includes(userId) && action === "join") {
+            await collection.updateOne(filter, {
+                $push: {
+                    members: userId
+                }
+            })
+            res.status(200).send('User joined group.');
+        } else if (members.includes(userId) && action == "join"){
+            res.status(201).send('User is already a member of the group.');
+        }
+
+        if (members.includes(userId) && action === "leave") {
+            await collection.updateOne(filter, {
+                $pull: {
+                    members: userId
+                }
+            })
+            res.status(200).send('User left group.');
+        } else if (!members.includes(userId) && action == "leave"){
+            res.status(201).send('User is not a member of the group.');
+        }
+    } catch (err) {
+        console.error(`Error retrieving data: ${err.message}`);
+        res.status(500).send('Internal server error');
+    }
+}));
+
+//Add comment to mediafile by {userId, mediafileId, comment}
 app.post('/comments', asyncHandler(async (req, res) => {
     try {
         const {userId, mediafileId, comment} = req.query
         // Insert comment in comments collection
         const comments = mongoose.connection.db.collection('comments')
         const {insertedId: commentId} = await comments.insertOne({
-            userId,
-            mediafileId,
-            text: comment,
-            timestamp: Date.now()
+            userId, mediafileId, text: comment, timestamp: Date.now()
         })
         // Add commentid to mediafile
         const collection = mongoose.connection.db.collection('mediafiles')
@@ -249,6 +294,18 @@ app.get('/photo', (req, res) => {
     }
 });
 
+app.get('/avatar', (req, res) => {
+    const {userId} = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'avatar');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    const photoPaths = photoFileNames.map(fileName => path.join(photoDirPath, fileName));
+    if (photoPaths.length > 0) {
+        res.sendFile(photoPaths[0]);
+    } else {
+        res.status(404).send('No photos found');
+    }
+});
+
 app.get('/photos-length', (req, res) => {
     const {userId} = req.query
     const photoDirPath = path.join(__dirname, 'uploads', userId, 'image');
@@ -281,25 +338,23 @@ let insertedid = ''
 const upload = multer({
     storage: multer.diskStorage({
         destination: async (req, file, cb) => {
-            const {userid: userId} = req.headers
-            const {mediatype: mediaType} = req.headers
+            const {userid: userId, mediatype: mediaType} = req.headers
+            const { avatar } = req.query
             let dir = `uploads/${userId}/${mediaType}/`;
+            if (!!avatar) {
+                dir = `uploads/${userId}/avatar/`;
+            }
             console.log(dir)
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, {recursive: true});
             }
-            cb(null, dir);
+
             const ext = MIME_TYPE_MAP[file.mimetype];
             console.log(ext)
             const collection = mongoose.connection.db.collection('mediafiles')
             const {insertedId} = await collection.insertOne({
-                userId,
-                mediaType,
-                timestamp: Date.now(),
-                likes: [],
-                comments: [],
+                userId, mediaType, timestamp: Date.now(), likes: [], comments: [],
             })
-            const filter = {insertedId}
             const path = dir + insertedId + '.' + ext
             console.log(path)
             const updateMediafile = {
@@ -307,10 +362,9 @@ const upload = multer({
             }
             collection.updateOne({_id: new ObjectId(insertedId)}, updateMediafile)
             insertedid = insertedId
-
-        },
-        filename: (req, file, cb) => {
-            ext = MIME_TYPE_MAP[file.mimetype];
+            cb(null, dir);
+        }, filename: (req, file, cb) => {
+            const ext = MIME_TYPE_MAP[file.mimetype];
             const name = String(insertedid) + '.' + ext;
             if (!!ext) {
                 cb(null, name);
@@ -323,11 +377,7 @@ const upload = multer({
 });
 
 const MIME_TYPE_MAP = {
-    'image/png': 'png',
-    'image/jpeg': 'jpeg',
-    'image/jpg': 'jpg',
-    'video/mp4': 'mp4',
-    'video/quicktime': 'mov'
+    'image/png': 'png', 'image/jpeg': 'jpeg', 'image/jpg': 'jpg', 'video/mp4': 'mp4', 'video/quicktime': 'mov'
 };
 
 app.post("/upload_files", upload.array("files"), async function (req, res) {
