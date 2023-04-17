@@ -39,14 +39,14 @@ app.get('/login', asyncHandler(async (req, res) => {
     }
 }));
 
-app.get('/register', asyncHandler(async (req, res) => {
+app.post('/register', asyncHandler(async (req, res) => {
     try {
         var { name, password, email } = req.query
         const collection = mongoose.connection.db.collection('users')
-        const cursor = collection.find({ name: name.toLowerCase() })
+        const cursor = collection.find({ email: email.toLowerCase() })
         const usersFound = await cursor.toArray()
         if (usersFound.length > 0) {
-            res.status(500).send('User already exists');
+            res.status(500).send('A user with this e-mail already exists');
             return
         }
         const { insertedId: id } = await collection.insertOne({
@@ -172,16 +172,42 @@ app.get('/comments', asyncHandler(async (req, res) => {
     }
 }));
 
-app.get('/photos', (req, res) => {
-    const { userId } = req.query
+app.get('/photo', (req, res) => {
+    const { userId, index} = req.query
     const photoDirPath = path.join(__dirname, 'uploads', userId, 'image');
     const photoFileNames = fs.readdirSync(photoDirPath);
     const photoPaths = photoFileNames.map(fileName => path.join(photoDirPath, fileName));
     if (photoPaths.length > 0) {
-        res.sendFile(photoPaths[0]);
+        res.sendFile(photoPaths[index]);
     } else {
         res.status(404).send('No photos found');
     }
+});
+
+app.get('/photos-length', (req, res) => {
+    const { userId } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'image');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    res.json(photoFileNames.length)
+});
+
+app.get('/video', (req, res) => {
+    const { userId, index} = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'video');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    const photoPaths = photoFileNames.map(fileName => path.join(photoDirPath, fileName));
+    if (photoPaths.length > 0) {
+        res.sendFile(photoPaths[index]);
+    } else {
+        res.status(404).send('No photos found');
+    }
+});
+
+app.get('/videos-length', (req, res) => {
+    const { userId } = req.query
+    const photoDirPath = path.join(__dirname, 'uploads', userId, 'video');
+    const photoFileNames = fs.readdirSync(photoDirPath);
+    res.json(photoFileNames.length)
 });
 
 const multer = require("multer");
@@ -190,8 +216,8 @@ let insertedid = ''
 const upload = multer({
     storage: multer.diskStorage({
         destination: async (req, file, cb) => {
-            const userId = req.headers.userid
-            const mediaType = req.headers.mediatype
+            const {userid: userId} = req.headers
+            const {mediatype: mediaType} = req.headers
             let dir = `uploads/${userId}/${mediaType}/`;
             console.log(dir)
             if (!fs.existsSync(dir)) {
