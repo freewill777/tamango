@@ -358,6 +358,10 @@ const upload = multer({
             let dir = `uploads/${userId}/${mediaType}/`;
             if (!!avatar) {
                 dir = `uploads/${userId}/avatar/`;
+                const fs = require('fs')
+                try{
+                    fs.rmdirSync(dir, {recursive: true})
+                }catch(err){console.error(err)}
             }
             console.log(dir)
             if (!fs.existsSync(dir)) {
