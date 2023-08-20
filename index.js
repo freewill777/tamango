@@ -410,10 +410,28 @@ app.get("/media", (req, res) => {
 		path.join(dirPath, fileName)
 	);
 	if (filePaths.length > 0) {
-		res.sendFile(filePaths[index]);
+		if (!!filePaths[index] && filePaths[index].includes(".jpeg")) 
+			return handleJpegFile(filePaths[index], res);
+		// res.sendFile(filePaths[index]);
 	} else {
 		res.status(469).json("No files found");
 	}
+});
+
+// GET User Media Length
+app.get("/media-info", (req, res) => {
+	const { userId } = req.query;
+	const dirPath = path.join(__dirname, "uploads", userId, "media");
+
+	const fileNames = fs.readdirSync(dirPath);
+	const filePaths = fileNames.map((fileName) =>
+		path.join(dirPath, fileName)
+	);
+
+	
+	const photoFileNames = fs.readdirSync(filePaths);
+
+	res.json(photoFileNames.length);
 });
 
 //GET User Photo by {userId, index}
@@ -588,8 +606,8 @@ app.get("/story", async (req, res) => {
 	const dirPath = path.join(__dirname, "uploads", userId, "story");
 	const fileNames = fs.readdirSync(dirPath);
 
-	if (index < 0 || index >= fileNames.length) {
-		return res.status(400).send("Invalid index");
+	if (index >= fileNames.length) {
+		return res.status(466).send("Invalid index");
 	}
 
 	const filePath = path.join(dirPath, fileNames[index]);
@@ -597,16 +615,13 @@ app.get("/story", async (req, res) => {
 	if (filePath.includes(".jpeg")) {
 		handleJpegFile(filePath, res);
 	} else if (filePath.includes(".mp4")) {
-		res.set("Content-Type", "video/mp4");
 		res.sendFile(filePath);
-		// await handleMovFileAsync(filePath, res);
 	} else {
 		res.status(400).send("Invalid file type");
 	}
 });
 
 function handleJpegFile(filePath, res) {
-	console.log("jpeg ==============");
 	sharp(filePath)
 		.resize({ width: 400 })
 		.jpeg({ quality: 30 })
