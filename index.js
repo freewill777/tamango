@@ -410,9 +410,10 @@ app.get("/media", (req, res) => {
 		path.join(dirPath, fileName)
 	);
 	if (filePaths.length > 0) {
-		if (!!filePaths[index] && filePaths[index].includes(".jpeg")) 
+		if (!!filePaths[index] && filePaths[index].includes(".jpeg")) {
 			return handleJpegFile(filePaths[index], res);
-		// res.sendFile(filePaths[index]);
+		}
+		res.sendFile(filePaths[index]);
 	} else {
 		res.status(469).json("No files found");
 	}
@@ -615,7 +616,9 @@ app.get("/story", async (req, res) => {
 	if (filePath.includes(".jpeg")) {
 		handleJpegFile(filePath, res);
 	} else if (filePath.includes(".mp4")) {
+		// res.set("Content-Type", "video/mp4");
 		res.sendFile(filePath);
+		// await handleMovFileAsync(filePath, res);
 	} else {
 		res.status(400).send("Invalid file type");
 	}
