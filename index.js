@@ -409,7 +409,7 @@ app.get("/media", (req, res) => {
 	const filePaths = fileNames.map((fileName) =>
 		path.join(dirPath, fileName)
 	);
-	if (filePaths.length > 0) {
+	if ((filePaths.length > 0) && !!filePaths[index]) {
 		if (!!filePaths[index] && filePaths[index].includes(".jpeg")) {
 			return handleJpegFile(filePaths[index], res);
 		}
