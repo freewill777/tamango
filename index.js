@@ -381,7 +381,7 @@ app.get(
 		}
 	})
 );
-	
+
 // GET User Avatar
 app.get("/avatar", (req, res) => {
 	const { userId } = req.query;
@@ -406,10 +406,8 @@ app.get("/media", (req, res) => {
 		if (err) return;
 	});
 	const fileNames = fs.readdirSync(dirPath);
-	const filePaths = fileNames.map((fileName) =>
-		path.join(dirPath, fileName)
-	);
-	if ((filePaths.length > 0) && !!filePaths[index]) {
+	const filePaths = fileNames.map((fileName) => path.join(dirPath, fileName));
+	if (filePaths.length > 0 && !!filePaths[index]) {
 		if (!!filePaths[index] && filePaths[index].includes(".jpeg")) {
 			return handleJpegFile(filePaths[index], res);
 		}
@@ -425,11 +423,8 @@ app.get("/media-info", (req, res) => {
 	const dirPath = path.join(__dirname, "uploads", userId, "media");
 
 	const fileNames = fs.readdirSync(dirPath);
-	const filePaths = fileNames.map((fileName) =>
-		path.join(dirPath, fileName)
-	);
+	const filePaths = fileNames.map((fileName) => path.join(dirPath, fileName));
 
-	
 	const photoFileNames = fs.readdirSync(filePaths);
 
 	res.json(photoFileNames.length);
@@ -454,7 +449,6 @@ app.get("/photo", (req, res) => {
 		res.status(404).json("No photos found");
 	}
 });
-
 
 app.get("/photos-length", (req, res) => {
 	const { userId } = req.query;
@@ -726,6 +720,14 @@ app.post("/events", async (req, res) => {
 	);
 
 	res.json({ id: insertedId });
+});
+
+app.get("/users", async (req, res) => {
+	const collection = mongoose.connection.db.collection("users");
+	const cursor = collection.find();
+	const data = await cursor.toArray();
+	console.log("data", data);
+	res.json(data);
 });
 
 app.listen(SERVER_PORT, () => {
