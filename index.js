@@ -108,6 +108,8 @@ app.post(
 					description2: "",
 					occupation: "",
 					avatar: "",
+					friends: [],
+					pendingFriends: [],
 				},
 			});
 
@@ -224,6 +226,71 @@ app.post(
 					$push: { "stats.following": recvUserId },
 				});
 				res.json({ message: `${senderUserId} followed ${recvUserId}!` });
+			}
+		} catch (err) {
+			console.error(`Error retrieving data: ${err.message}`);
+			res.status(500).json("Internal server error");
+		}
+	})
+);
+
+//{senderUserId} sends  {recvUserId} friend request
+app.post(
+	"/friend-request",
+	asyncHandler(async (req, res) => {
+		try {
+			const { senderUserId, recvUserId } = req.query;
+			const collection = mongoose.connection.db.collection("users");
+
+			const recvFilter = { _id: new ObjectId(recvUserId) };
+			const recvUser = await collection.find(recvFilter).toArray();
+
+			const { stats } = recvUser[0];
+			const { pendingFriends } = stats;
+			const isAlreadyPending = pendingFriends.includes(senderUserId);
+
+			if (!isAlreadyPending) {
+				collection.updateOne(recvFilter, {
+					$push: { "stats.pendingFriends": senderUserId },
+				});
+				res
+					.status(200)
+					.json({ message: `${senderUserId} added ${recvUserId} as friend!` });
+			}
+		} catch (err) {
+			console.error(`Error retrieving data: ${err.message}`);
+			res.status(500).json("Internal server error");
+		}
+	})
+);
+
+//{userId} accepts  {friendId}'s request
+app.post(
+	"/accept-request",
+	asyncHandler(async (req, res) => {
+		try {
+			const { friendId, userId } = req.query;
+			const collection = mongoose.connection.db.collection("users");
+
+			const userObj = { _id: new ObjectId(userId) };
+			const friendObj = { _id: new ObjectId(friendId) };
+			const recvUser = await collection.find(userObj).toArray();
+
+			const { stats } = recvUser[0];
+			const { pendingFriends } = stats;
+			const isAlreadyPending = pendingFriends.includes(friendId);
+
+			if (isAlreadyPending) {
+				collection.updateOne(userObj, {
+					$push: { "stats.friends": friendId },
+					$pop: { "stats.pendingFriends": -1 },
+				});
+				collection.updateOne(friendObj, {
+					$push: { "stats.friends": userId },
+				});
+				res
+					.status(200)
+					.json({ message: `${userId} accepted ${friendId} as friend!` });
 			}
 		} catch (err) {
 			console.error(`Error retrieving data: ${err.message}`);
@@ -694,31 +761,19 @@ app.get("/event-media", (req, res) => {
 });
 
 app.post("/events", async (req, res) => {
-	const { userid, eventdate, eventname } = req.headers;
+	const { eventdate, eventname } = req.headers;
 
 	const collection = mongoose.connection.db.collection("events");
+
 	const { insertedId } = await collection.insertOne({
 		date: eventdate,
 		name: eventname,
+		likes: [],
+		comments: [],
 	});
 
 	fs.mkdirSync(`./events/${insertedId}`, { recursive: true });
 	fs.mkdirSync(`./events/${insertedId}/media`, { recursive: true });
-	fs.appendFile(
-		`./events/${insertedId}/info.txt`,
-		`
-    event id: ${insertedId};
-    user id: ${userid};
-    event date: ${eventdate};
-    event name: ${eventname};
-    media files: ${insertedId} // ??
-  `,
-		function (err) {
-			if (err) throw err;
-			console.log("Saved!");
-		}
-	);
-
 	res.json({ id: insertedId });
 });
 
@@ -726,7 +781,6 @@ app.get("/users", async (req, res) => {
 	const collection = mongoose.connection.db.collection("users");
 	const cursor = collection.find();
 	const data = await cursor.toArray();
-	console.log("data", data);
 	res.json(data);
 });
 
